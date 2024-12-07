@@ -343,6 +343,62 @@
         background: linear-gradient(#6b87c2, #8fb2f0);
     }
 
+    @media (max-width: 768px) {
+
+        main {
+            flex-direction: column;
+            align-items: center;
+            overflow: auto;
+        }
+
+        .resize-handle, .rotation-handle {
+            touch-action: none; /* Prevent touch gestures from interfering */
+            width: 24px;
+            height: 24px;
+        }
+
+        nav {
+            width: 100%;
+            flex: 1;
+            order: 2;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px); /* Ensure it doesn't overflow the screen height */
+            padding-bottom: 10px;
+        }
+
+        .char-list img {
+            max-width: 100px;
+        }
+
+        .editor {
+            width: 100%;
+            order: 1;
+            margin-bottom: 20px;
+        }
+
+        .canvas-container {
+            width: 90%;
+            margin: 0 auto;
+        }
+
+        header {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        header h1 {
+            font-size: 1.4em;
+            text-align: center;
+            flex: 1 1 100%;
+        }
+
+        header .controls {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    }
+
+
 </style>
 </head>
 <body>
@@ -619,6 +675,64 @@
             addSticker(target.dataset.char);
         }
     });
+
+    document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchmove', (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchend', (e) => handleTouchEnd(e), { passive: false });
+
+    function normalizeEvent(e) {
+        if (e.touches && e.touches.length > 0) {
+            return e.touches[0];
+        }
+        return e;
+    }
+
+    function handleTouch(e) {
+        const normalizedEvent = normalizeEvent(e);
+
+        if (isDragging && activeSticker) {
+            const rect = canvasContainer.getBoundingClientRect();
+            const newX = normalizedEvent.clientX - rect.left - dragOffset.x;
+            const newY = normalizedEvent.clientY - rect.top - dragOffset.y;
+
+            activeSticker.style.left = `${newX}px`;
+            activeSticker.style.top = `${newY}px`;
+            e.preventDefault(); // Prevent scrolling during touch interactions
+        } else if (isResizing && activeSticker) {
+            const rect = activeSticker.getBoundingClientRect();
+            const width = normalizedEvent.clientX - rect.left;
+
+            const img = activeSticker.querySelector('img');
+            let newWidth = Math.max(30, width);
+
+            if (img && img.naturalWidth && img.naturalHeight) {
+                const aspect = img.naturalWidth / img.naturalHeight;
+                let newHeight = newWidth / aspect;
+                if (newHeight < 30) {
+                    newHeight = 30;
+                    newWidth = newHeight * aspect;
+                }
+                activeSticker.style.width = `${newWidth}px`;
+                activeSticker.style.height = `${newHeight}px`;
+            } else {
+                activeSticker.style.width = `${Math.max(30, width)}px`;
+            }
+            e.preventDefault();
+        } else if (isRotating && activeSticker) {
+            const angle = Math.atan2(normalizedEvent.clientY - centerPoint.y, normalizedEvent.clientX - centerPoint.x);
+            const rotation = initialRotation + (angle - initialAngle) * (180 / Math.PI);
+            activeSticker.style.transform = `rotate(${rotation}deg)`;
+            e.preventDefault();
+        }
+    }
+
+    function handleTouchEnd(e) {
+        isDragging = false;
+        isResizing = false;
+        isRotating = false;
+        activeSticker = null;
+    }
+
 
     document.addEventListener('mousemove', (e) => {
         if (isDragging && activeSticker) {
