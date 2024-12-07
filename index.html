@@ -708,26 +708,34 @@
 
     // Update touch event listeners to be more selective
     document.addEventListener('touchstart', (e) => {
-        // Only prevent default and handle touch if it's in the canvas
         if (isEventInCanvas(e)) {
-            e.preventDefault();
+            // Only prevent default if we're interacting with a sticker or initiating an action
+            // For example, if we have just selected a sticker for dragging:
+            if (activeSticker || isDragging || isResizing || isRotating) {
+                e.preventDefault();
+            }
             handleTouch(e);
         }
     }, { passive: false });
 
     document.addEventListener('touchmove', (e) => {
-        // If we're dragging/resizing/rotating, prevent default to allow smooth dragging
-        if ((isEventInCanvas(e) && (isDragging || isResizing || isRotating)) || activeSticker) {
+        // Prevent default only if we're currently performing an action on a sticker
+        if ((isDragging || isResizing || isRotating) && isEventInCanvas(e)) {
             e.preventDefault();
             handleTouch(e);
+        } else {
+            // Don't prevent default when just swiping normally or interacting with non-canvas elements
+            // This allows input and buttons to work properly.
         }
     }, { passive: false });
 
     document.addEventListener('touchend', (e) => {
-        e.preventDefault();
+        // Only prevent default if we were in the middle of an action
+        if (isDragging || isResizing || isRotating) {
+            e.preventDefault();
+        }
         handleTouchEnd(e);
     }, { passive: false });
-
 
     function normalizeEvent(e) {
         if (e.touches && e.touches.length > 0) {
