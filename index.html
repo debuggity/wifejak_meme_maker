@@ -474,6 +474,18 @@
     let initialAngle = 0;
     let centerPoint = { x:0, y:0 };
 
+    // New function to determine if an event is within the canvas
+    function isEventInCanvas(event) {
+        const canvasRect = canvasContainer.getBoundingClientRect();
+        const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+        const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+        
+        return clientX >= canvasRect.left && 
+               clientX <= canvasRect.right && 
+               clientY >= canvasRect.top && 
+               clientY <= canvasRect.bottom;
+    }
+
     function setBackground(url) {
         if (!backgroundImg) {
             backgroundImg = document.createElement('img');
@@ -529,6 +541,14 @@
         sticker.addEventListener('mousedown', (e) => onStickerMouseDown(e, sticker));
         resizeHandle.addEventListener('mousedown', (e) => onResizeMouseDown(e, sticker));
         rotationHandle.addEventListener('mousedown', (e) => onRotateMouseDown(e, sticker));
+
+        // Touch events with specific handling
+        sticker.addEventListener('touchstart', (e) => {
+            if (isEventInCanvas(e)) {
+                e.preventDefault();
+                onStickerMouseDown(e, sticker);
+            }
+        }, { passive: false });
 
         flipButton.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -677,9 +697,25 @@
         }
     });
 
-    document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
-    document.addEventListener('touchmove', (e) => handleTouch(e), { passive: false });
-    document.addEventListener('touchend', (e) => handleTouchEnd(e), { passive: false });
+    // Update touch event listeners to be more selective
+    document.addEventListener('touchstart', (e) => {
+        // Only prevent default and handle touch if it's in the canvas
+        if (isEventInCanvas(e)) {
+            e.preventDefault();
+            handleTouch(e);
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+        // Only prevent default and handle touch if it's in the canvas or we're already interacting with a sticker
+        if ((isEventInCanvas(e) && (isDragging || isResizing || isRotating)) || activeSticker) {
+            handleTouch(e);
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+        handleTouchEnd(e);
+    }, { passive: false });
 
     function normalizeEvent(e) {
         if (e.touches && e.touches.length > 0) {
@@ -688,50 +724,49 @@
         return e;
     }
 
+    // Modify the handleTouch and handleTouchEnd functions to be more flexible
     function handleTouch(e) {
         const normalizedEvent = normalizeEvent(e);
 
-        if (isDragging || isResizing || isRotating) {
-            e.preventDefault();
-        }
+        // Only proceed if we're interacting with a sticker on the canvas
+        if (activeSticker && (isDragging || isResizing || isRotating)) {
+            if (isDragging) {
+                const rect = canvasContainer.getBoundingClientRect();
+                const newX = normalizedEvent.clientX - rect.left - dragOffset.x;
+                const newY = normalizedEvent.clientY - rect.top - dragOffset.y;
 
-        if (isDragging && activeSticker) {
-            const rect = canvasContainer.getBoundingClientRect();
-            const newX = normalizedEvent.clientX - rect.left - dragOffset.x;
-            const newY = normalizedEvent.clientY - rect.top - dragOffset.y;
+                activeSticker.style.left = `${newX}px`;
+                activeSticker.style.top = `${newY}px`;
+            } else if (isResizing) {
+                // Resize logic remains the same as in previous implementation
+                const rect = activeSticker.getBoundingClientRect();
+                const width = normalizedEvent.clientX - rect.left;
 
-            activeSticker.style.left = `${newX}px`;
-            activeSticker.style.top = `${newY}px`;
-            e.preventDefault(); // Prevent scrolling during touch interactions
-        } else if (isResizing && activeSticker) {
-            const rect = activeSticker.getBoundingClientRect();
-            const width = normalizedEvent.clientX - rect.left;
+                const img = activeSticker.querySelector('img');
+                let newWidth = Math.max(30, width);
 
-            const img = activeSticker.querySelector('img');
-            let newWidth = Math.max(30, width);
-
-            if (img && img.naturalWidth && img.naturalHeight) {
-                const aspect = img.naturalWidth / img.naturalHeight;
-                let newHeight = newWidth / aspect;
-                if (newHeight < 30) {
-                    newHeight = 30;
-                    newWidth = newHeight * aspect;
+                if (img && img.naturalWidth && img.naturalHeight) {
+                    const aspect = img.naturalWidth / img.naturalHeight;
+                    let newHeight = newWidth / aspect;
+                    if (newHeight < 30) {
+                        newHeight = 30;
+                        newWidth = newHeight * aspect;
+                    }
+                    activeSticker.style.width = `${newWidth}px`;
+                    activeSticker.style.height = `${newHeight}px`;
+                } else {
+                    activeSticker.style.width = `${Math.max(30, width)}px`;
                 }
-                activeSticker.style.width = `${newWidth}px`;
-                activeSticker.style.height = `${newHeight}px`;
-            } else {
-                activeSticker.style.width = `${Math.max(30, width)}px`;
+            } else if (isRotating) {
+                const angle = Math.atan2(normalizedEvent.clientY - centerPoint.y, normalizedEvent.clientX - centerPoint.x);
+                const rotation = initialRotation + (angle - initialAngle) * (180 / Math.PI);
+                activeSticker.style.transform = `rotate(${rotation}deg)`;
             }
-            e.preventDefault();
-        } else if (isRotating && activeSticker) {
-            const angle = Math.atan2(normalizedEvent.clientY - centerPoint.y, normalizedEvent.clientX - centerPoint.x);
-            const rotation = initialRotation + (angle - initialAngle) * (180 / Math.PI);
-            activeSticker.style.transform = `rotate(${rotation}deg)`;
-            e.preventDefault();
         }
     }
 
     function handleTouchEnd(e) {
+        // Reset interaction states
         isDragging = false;
         isResizing = false;
         isRotating = false;
