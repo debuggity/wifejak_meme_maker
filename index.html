@@ -398,8 +398,7 @@
         sticker.style.width = "150px";
         sticker.style.height = "auto";
         sticker.style.position = 'absolute';
-        sticker.style.transform = 'translate(-50%, -50%)'; // Center the sticker
-
+        
         const img = document.createElement('img');
         img.src = src;
         img.alt = "Meme Sticker";
@@ -646,7 +645,7 @@
         } else if (isRotating && activeSticker) {
             const angle = Math.atan2(e.clientY - centerPoint.y, e.clientX - centerPoint.x);
             const rotation = initialRotation + (angle - initialAngle) * (180 / Math.PI);
-            activeSticker.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+            activeSticker.style.transform = `rotate(${rotation}deg)`;
         }
     });
 
