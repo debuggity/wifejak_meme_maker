@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Wifejak Meme Maker</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background: linear-gradient(to bottom right, #e9ebee, #c9cace);
+    }
+
+    header {
+        background: #1f1f1f;
+        color: #fff;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    header h1 {
+        font-size: 1.5em;
+        margin: 0;
+    }
+
+    header .controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    header .controls label, 
+    header .controls button {
+        background: #2e2e2e;
+        color: #fff;
+        padding: 8px 16px;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.9em;
+        transition: background 0.3s;
+        display: flex;
+        align-items: center;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    header .controls label:hover,
+    header .controls button:hover {
+        background: #3c3c3c;
+    }
+
+    header .controls input[type="file"] {
+        display: none;
+    }
+
+    main {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+    }
+
+    nav {
+        width: 240px;
+        background: #f7f7f7;
+        border-right: 1px solid #ccc;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 10px;
+        box-sizing: border-box;
+    }
+
+    nav h2 {
+        font-size: 1.2em;
+        margin-top: 0;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .char-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+        align-items: center;
+    }
+
+    .char-list img {
+        width: 100%;
+        max-width: 180px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        transition: transform 0.3s, border-color 0.3s;
+        background: #fff;
+    }
+
+    .char-list img:hover {
+        transform: scale(1.05);
+        border-color: #666;
+    }
+
+    .editor {
+        position: relative;
+        flex: 1;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        overflow: hidden;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* Make the canvas a fixed square shape */
+    .canvas-container {
+        position: relative;
+        width: 80%;
+        max-width: 600px;
+        /* Force it to be square */
+        aspect-ratio: 1 / 1; 
+        background: #eee;
+        border: 2px dashed #ccc;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .canvas-container img.background {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
+        user-select: none;
+        display: block;
+    }
+
+    /* Canvas Toolbar Styles */
+    .canvas-toolbar {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .toolbar-button {
+        background: #444;
+        color: #fff;
+        padding: 8px 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        font-weight: 600;
+        transition: background 0.3s;
+    }
+
+    .toolbar-button:hover {
+        background: #333;
+    }
+
+    .sticker {
+        position: absolute;
+        cursor: move;
+        user-select: none;
+        display: inline-block;
+    }
+
+    .sticker img {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    .resize-handle,
+    .rotation-handle {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        background: #fff;
+        border: 2px solid #333;
+        border-radius: 50%;
+        box-sizing: border-box;
+    }
+
+    .resize-handle {
+        cursor: nwse-resize;
+        right: -7px;
+        bottom: -7px;
+    }
+
+    .rotation-handle {
+        cursor: grab;
+        left: 50%;
+        top: -25px;
+        transform: translateX(-50%);
+    }
+
+    /* Flip button styles */
+    .flip-button {
+        position: absolute;
+        bottom: 5px;
+        left: 5px;
+        background: #444;
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
+        line-height: 24px;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+        transform: none !important; /* Prevent flip */
+        transition: background 0.3s ease, transform 0.3s ease;
+    }
+
+    .flip-button:hover {
+        background: #333;
+        transform: scale(1.2); /* Only apply hover effect */
+    }
+
+    /* Delete button styles */
+    .delete-button {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        background: #e74c3c;
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
+        line-height: 24px;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+        transform: none !important; /* Prevent transformation from parent */
+        transition: background 0.3s ease, transform 0.3s ease;
+    }
+
+    .delete-button:hover {
+        background: #c0392b;
+        transform: scale(1.2); /* Hover effect */
+    }
+
+    .sticker img.flipped {
+        transform: scaleX(-1);
+    }
+
+    footer {
+        background: #1f1f1f;
+        color: #fff;
+        text-align: center;
+        padding: 5px;
+        font-size: 0.9em;
+    }
+
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f4f4f4;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #bbb;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
+
+</style>
+</head>
+<body>
+    <header>
+        <h1>Wifejak Meme Maker</h1>
+        <div class="controls">
+            <label for="bg-upload" title="Upload a background image">
+                Upload Background
+            </label>
+            <input type="file" id="bg-upload" accept="image/*"/>
+            <button id="export-btn" title="Export your meme as a PNG image">Download Meme</button>
+        </div>
+    </header>
+    <main>
+        <nav>
+            <h2>Wifejaks</h2>
+            <div class="char-list">
+            <!-- Characters: Each image is a sticker source -->
+            <img src="memes/WifeJakCrop.png" alt="Wifejak 0" data-char="memes/WifeJakCrop.png"/>
+            <img src="memes/90smom-no-bg.png" alt="Wifejak 1" data-char="memes/90smom-no-bg.png"/>
+            <img src="memes/aristocrat-no-bg.png" alt="Wifejak 2" data-char="memes/aristocrat-no-bg.png"/>
+            <img src="memes/autum-no-bg.png" alt="Wifejak 3" data-char="memes/autum-no-bg.png"/>
+            <img src="memes/cave-no-bg.png" alt="Wifejak 4" data-char="memes/cave-no-bg.png"/>
+            <img src="memes/coffee-no-bg.png" alt="Wifejak 5" data-char="memes/coffee-no-bg.png"/>
+            <img src="memes/couch-no-bg.png" alt="Wifejak 6" data-char="memes/couch-no-bg.png"/>
+            <img src="memes/cowgirl.png" alt="Wifejak 7" data-char="memes/cowgirl.png"/>
+            <img src="memes/leia.png" alt="Wifejak 8" data-char="memes/leia.png"/>
+            <img src="memes/longhair-no-bg.png" alt="Wifejak 9" data-char="memes/longhair-no-bg.png"/>
+            <img src="memes/music.png" alt="Wifejak 10" data-char="memes/music.png"/>
+            <img src="memes/nerd-no-bg.png" alt="Wifejak 11" data-char="memes/nerd-no-bg.png"/>
+            <img src="memes/shopping-no-bg.png" alt="Wifejak 12" data-char="memes/shopping-no-bg.png"/>
+            <img src="memes/vampiric-no-bg.png" alt="Wifejak 13" data-char="memes/vampiric-no-bg.png"/>
+            <img src="memes/thicc-no-bg.png" alt="Wifejak 14" data-char="memes/thicc-no-bg.png"/>
+            <img src="memes/DaughterJakCropped.png" alt="Wifejak 15" data-char="memes/DaughterJakCropped.png"/>
+            <img src="memes/HusbandJakCrop.png" alt="Wifejak 16" data-char="memes/HusbandJakCrop.png"/>
+        </div>
+    </nav>
+    <div class="editor">
+        <div class="canvas-container" id="canvas-container">
+            <!-- Background and stickers go here -->
+        </div>
+        <div class="canvas-toolbar">
+            <label for="bg-upload" class="toolbar-button">Upload Background</label>
+            <input type="file" id="bg-upload" accept="image/*" style="display:none;" />
+            <button id="export-btn" class="toolbar-button">Download Meme</button>
+        </div>
+        
+    </div>
+</main>
+<footer>
+    Wifejak Meme Maker
+</footer>
+
+<script>
+(function() {
+    "use strict";
+
+    const bgUpload = document.getElementById('bg-upload');
+    const canvasContainer = document.getElementById('canvas-container');
+    const exportBtn = document.getElementById('export-btn');
+    const charList = document.querySelector('.char-list');
+
+    let backgroundImg = null;
+    const stickers = [];
+
+    // Current interaction states
+    let activeSticker = null;
+    let isDragging = false;
+    let isResizing = false;
+    let isRotating = false;
+
+    // For dragging
+    let dragOffset = { x:0, y:0 };
+
+    // For rotating
+    let initialRotation = 0;
+    let initialAngle = 0;
+    let centerPoint = { x:0, y:0 };
+
+    /**
+     * Sets the background image of the meme canvas.
+     * @param {string} url - The URL of the background image.
+     */
+     function setBackground(url) {
+        if (!backgroundImg) {
+            backgroundImg = document.createElement('img');
+            backgroundImg.classList.add('background');
+            canvasContainer.appendChild(backgroundImg);
+        }
+        backgroundImg.onload = () => {
+            const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
+            // For example, keep the width (already 80% or max-width: 1000px)
+            // and adjust height to match the aspect ratio.
+            const containerWidth = canvasContainer.clientWidth;
+            const containerHeight = containerWidth / aspectRatio;
+            canvasContainer.style.height = `${containerHeight}px`;
+        };
+        backgroundImg.src = url;
+    }
+
+
+    /**
+     * Add a new sticker to the canvas from a given image source.
+     * Positions it at the center.
+     * @param {string} src - Image URL of the sticker.
+     */
+     function addSticker(src) {
+        const sticker = document.createElement('div');
+        sticker.classList.add('sticker');
+        sticker.style.left = "50%";
+        sticker.style.top = "50%";
+        sticker.style.width = "150px";
+        sticker.style.height = "auto";
+        sticker.style.position = 'absolute';
+
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = "Meme Sticker";
+        sticker.appendChild(img);
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.classList.add('resize-handle');
+        sticker.appendChild(resizeHandle);
+
+        const rotationHandle = document.createElement('div');
+        rotationHandle.classList.add('rotation-handle');
+        sticker.appendChild(rotationHandle);
+
+        // Add flip button
+        const flipButton = document.createElement('button');
+        flipButton.classList.add('flip-button');
+        flipButton.innerHTML = '⇋'; // Flip symbol
+        flipButton.title = 'Flip Image';
+        sticker.appendChild(flipButton);
+
+        // Add delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.classList.add('delete-button');
+        deleteButton.innerHTML = '✖'; // Delete symbol
+        deleteButton.title = 'Delete Sticker';
+        sticker.appendChild(deleteButton);
+
+        canvasContainer.appendChild(sticker);
+        stickers.push(sticker);
+
+        // Event listeners for interactions
+        sticker.addEventListener('mousedown', (e) => onStickerMouseDown(e, sticker));
+        resizeHandle.addEventListener('mousedown', (e) => onResizeMouseDown(e, sticker));
+        rotationHandle.addEventListener('mousedown', (e) => onRotateMouseDown(e, sticker));
+
+        // Flip Button Logic
+        flipButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent any parent interaction
+            const img = sticker.querySelector('img');
+            img.classList.toggle('flipped');
+        });
+
+        // Delete Button Logic
+        deleteButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent any parent interaction
+            sticker.remove(); // Remove the sticker from the DOM
+            const index = stickers.indexOf(sticker);
+            if (index !== -1) stickers.splice(index, 1); // Remove from stickers array
+        });
+    }
+
+
+    /**
+     * Brings the selected sticker to the front by adjusting its z-index.
+     * @param {HTMLElement} sticker - The sticker element to bring to front.
+     */
+    function bringToFront(sticker) {
+        let maxZ = 1;
+        stickers.forEach(s => {
+            const z = parseInt(window.getComputedStyle(s).zIndex, 10) || 0;
+            if (z > maxZ) maxZ = z;
+        });
+        sticker.style.zIndex = maxZ + 1;
+    }
+
+    /**
+     * Retrieve the current rotation angle (in degrees) from an element's transform.
+     * @param {HTMLElement} element - The element from which to extract rotation.
+     * @returns {number} The rotation angle in degrees.
+     */
+    function getCurrentRotation(element) {
+        const style = window.getComputedStyle(element, null);
+        const transform = style.getPropertyValue("transform");
+        if (transform !== 'none') {
+            const values = transform.split('(')[1].split(')')[0].split(',');
+            const a = parseFloat(values[0]);
+            const b = parseFloat(values[1]);
+            return Math.round(Math.atan2(b, a) * (180/Math.PI));
+        } 
+        return 0;
+    }
+
+    /**
+     * Handle sticker click/drag start events.
+     */
+    function onStickerMouseDown(e, sticker) {
+        // If clicking on resize/rotation handles, skip dragging
+        if (e.target.classList.contains('resize-handle') || e.target.classList.contains('rotation-handle')) return;
+
+        activeSticker = sticker;
+        isDragging = true;
+        bringToFront(sticker);
+
+        const rect = sticker.getBoundingClientRect();
+        const canvasRect = canvasContainer.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left + canvasRect.left;
+        dragOffset.y = e.clientY - rect.top + canvasRect.top;
+        e.preventDefault();
+    }
+
+    /**
+     * Handle resize handle mouse down.
+     */
+    function onResizeMouseDown(e, sticker) {
+        e.stopPropagation();
+        activeSticker = sticker;
+        isResizing = true;
+
+        const rect = sticker.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.right;
+        dragOffset.y = e.clientY - rect.bottom;
+
+        e.preventDefault();
+    }
+
+    /**
+     * Handle rotation handle mouse down.
+     */
+    function onRotateMouseDown(e, sticker) {
+        e.stopPropagation();
+        activeSticker = sticker;
+        isRotating = true;
+
+        const rect = sticker.getBoundingClientRect();
+        centerPoint.x = rect.left + rect.width / 2;
+        centerPoint.y = rect.top + rect.height / 2;
+
+        initialRotation = getCurrentRotation(sticker);
+
+        const angle = Math.atan2(e.clientY - centerPoint.y, e.clientX - centerPoint.x);
+        initialAngle = angle;
+
+        e.preventDefault();
+    }
+
+    /**
+     * Export the final meme as an image file.
+     * Draws background and stickers onto a canvas and triggers a download.
+     */
+    function exportMeme() {
+        const rect = canvasContainer.getBoundingClientRect();
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+        const ctx = canvas.getContext('2d');
+
+        if (backgroundImg && backgroundImg.src) {
+            ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+        } else {
+            // If no background is set, warn the user
+            alert("Please upload a background before exporting.");
+            return;
+        }
+
+        stickers.forEach(sticker => {
+            const img = sticker.querySelector('img');
+            if (!img) return;
+
+            const sRect = sticker.getBoundingClientRect();
+            const cRect = canvasContainer.getBoundingClientRect();
+
+            let transform = window.getComputedStyle(sticker).transform;
+            if (transform === 'none') transform = 'matrix(1,0,0,1,0,0)';
+
+            const values = transform.match(/matrix\((.+)\)/)[1].split(',');
+            const a = parseFloat(values[0]);
+            const b = parseFloat(values[1]);
+            const c = parseFloat(values[2]);
+            const d = parseFloat(values[3]);
+
+            const x = sRect.left - cRect.left;
+            const y = sRect.top - cRect.top;
+
+            ctx.save();
+            const centerX = x + sRect.width / 2;
+            const centerY = y + sRect.height / 2;
+            ctx.translate(centerX, centerY);
+
+            const rotation = Math.atan2(b, a);
+            const scaleX = Math.sqrt(a*a + b*b);
+            const scaleY = Math.sqrt(c*c + d*d);
+
+            ctx.rotate(rotation);
+            ctx.scale(scaleX, scaleY);
+            ctx.drawImage(img, -sRect.width / 2, -sRect.height / 2, sRect.width, sRect.height);
+            ctx.restore();
+        });
+
+        canvas.toBlob((blob) => {
+            const link = document.createElement('a');
+            link.download = 'wifejak_meme.png';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+        });
+    }
+
+    // Event Listeners
+    bgUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            setBackground(url);
+        }
+    });
+
+    charList.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.tagName.toLowerCase() === 'img' && target.dataset.char) {
+            addSticker(target.dataset.char);
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging && activeSticker) {
+            const rect = canvasContainer.getBoundingClientRect();
+            const sRect = activeSticker.getBoundingClientRect();
+            const halfWidth = sRect.width / 2;
+            const halfHeight = sRect.height / 2;
+
+            const x = e.clientX - rect.left - halfWidth;
+            const y = e.clientY - rect.top - halfHeight;
+
+            activeSticker.style.left = `${x}px`;
+            activeSticker.style.top = `${y}px`;
+        } else if (isResizing && activeSticker) {
+            // Maintain aspect ratio during resizing
+            const rect = activeSticker.getBoundingClientRect();
+            const width = e.clientX - rect.left;
+            const img = activeSticker.querySelector('img');
+            let newWidth = Math.max(30, width);
+
+            if (img && img.naturalWidth && img.naturalHeight) {
+                const aspect = img.naturalWidth / img.naturalHeight;
+                let newHeight = newWidth / aspect;
+                if (newHeight < 30) {
+                    newHeight = 30;
+                    newWidth = newHeight * aspect;
+                }
+                activeSticker.style.width = `${newWidth}px`;
+                activeSticker.style.height = `${newHeight}px`;
+            } else {
+                activeSticker.style.width = `${Math.max(30, width)}px`;
+            }
+        } else if (isRotating && activeSticker) {
+            const angle = Math.atan2(e.clientY - centerPoint.y, e.clientX - centerPoint.x);
+            const rotation = initialRotation + (angle - initialAngle) * (180 / Math.PI);
+            activeSticker.style.transform = `rotate(${rotation}deg)`;
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        isResizing = false;
+        isRotating = false;
+        activeSticker = null;
+    });
+
+    exportBtn.addEventListener('click', () => {
+        exportMeme();
+    });
+})();
+</script>
+</body>
+</html>
