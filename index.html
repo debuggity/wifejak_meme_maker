@@ -539,21 +539,22 @@
      * Export the final meme as an image file.
      * Draws background and stickers onto a canvas and triggers a download.
      */
-    function exportMeme() {
+     function exportMeme() {
         const rect = canvasContainer.getBoundingClientRect();
         const canvas = document.createElement('canvas');
         canvas.width = Math.floor(rect.width);
         canvas.height = Math.floor(rect.height);
         const ctx = canvas.getContext('2d');
 
+        // Draw the background
         if (backgroundImg && backgroundImg.src) {
             ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
         } else {
-            // If no background is set, warn the user
             alert("Please upload a background before exporting.");
             return;
         }
 
+        // Draw all stickers
         stickers.forEach(sticker => {
             const img = sticker.querySelector('img');
             if (!img) return;
@@ -561,33 +562,29 @@
             const sRect = sticker.getBoundingClientRect();
             const cRect = canvasContainer.getBoundingClientRect();
 
-            let transform = window.getComputedStyle(sticker).transform;
-            if (transform === 'none') transform = 'matrix(1,0,0,1,0,0)';
-
-            const values = transform.match(/matrix\((.+)\)/)[1].split(',');
-            const a = parseFloat(values[0]);
-            const b = parseFloat(values[1]);
-            const c = parseFloat(values[2]);
-            const d = parseFloat(values[3]);
-
             const x = sRect.left - cRect.left;
             const y = sRect.top - cRect.top;
 
-            ctx.save();
+            const scaleX = img.classList.contains('flipped') ? -1 : 1;
             const centerX = x + sRect.width / 2;
             const centerY = y + sRect.height / 2;
+
+            ctx.save();
             ctx.translate(centerX, centerY);
+            ctx.scale(scaleX, 1);
 
-            const rotation = Math.atan2(b, a);
-            const scaleX = Math.sqrt(a*a + b*b);
-            const scaleY = Math.sqrt(c*c + d*d);
+            const transform = window.getComputedStyle(sticker).transform;
+            if (transform !== 'none') {
+                const matrix = new DOMMatrix(transform);
+                const rotation = Math.atan2(matrix.b, matrix.a);
+                ctx.rotate(rotation);
+            }
 
-            ctx.rotate(rotation);
-            ctx.scale(scaleX, scaleY);
-            ctx.drawImage(img, -sRect.width / 2, -sRect.height / 2, sRect.width, sRect.height);
+            ctx.drawImage(img, -sRect.width / 2 * scaleX, -sRect.height / 2, sRect.width, sRect.height);
             ctx.restore();
         });
 
+        // Trigger the download
         canvas.toBlob((blob) => {
             const link = document.createElement('a');
             link.download = 'wifejak_meme.png';
@@ -595,6 +592,10 @@
             link.click();
         });
     }
+
+    document.querySelectorAll('#export-btn').forEach(button => {
+        button.addEventListener('click', exportMeme);
+    });
 
     // Event Listeners
     bgUpload.addEventListener('change', (e) => {
