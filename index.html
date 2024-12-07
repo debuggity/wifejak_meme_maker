@@ -295,7 +295,7 @@
                 Upload Background
             </label>
             <input type="file" id="bg-upload" accept="image/*"/>
-            <button id="export-btn" title="Export your meme as a PNG image">Download Meme</button>
+            <button class="export-btn" title="Export your meme as a PNG image">Download Meme</button>
         </div>
     </header>
     <main>
@@ -328,8 +328,8 @@
         </div>
         <div class="canvas-toolbar">
             <label for="bg-upload" class="toolbar-button">Upload Background</label>
-            <input type="file" id="bg-upload" accept="image/*" style="display:none;" />
-            <button id="export-btn" class="toolbar-button">Download Meme</button>
+            <!-- Removed duplicate bg-upload input -->
+            <button class="export-btn toolbar-button">Download Meme</button>
         </div>
         
     </div>
@@ -344,7 +344,7 @@
 
     const bgUpload = document.getElementById('bg-upload');
     const canvasContainer = document.getElementById('canvas-container');
-    const exportBtn = document.getElementById('export-btn');
+    const exportButtons = document.querySelectorAll('.export-btn');
     const charList = document.querySelector('.char-list');
 
     let backgroundImg = null;
@@ -376,8 +376,7 @@
         }
         backgroundImg.onload = () => {
             const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
-            // For example, keep the width (already 80% or max-width: 1000px)
-            // and adjust height to match the aspect ratio.
+            // Adjust height to maintain aspect ratio
             const containerWidth = canvasContainer.clientWidth;
             const containerHeight = containerWidth / aspectRatio;
             canvasContainer.style.height = `${containerHeight}px`;
@@ -399,6 +398,7 @@
         sticker.style.width = "150px";
         sticker.style.height = "auto";
         sticker.style.position = 'absolute';
+        sticker.style.transform = 'translate(-50%, -50%)'; // Center the sticker
 
         const img = document.createElement('img');
         img.src = src;
@@ -495,8 +495,8 @@
 
         const rect = sticker.getBoundingClientRect();
         const canvasRect = canvasContainer.getBoundingClientRect();
-        dragOffset.x = e.clientX - rect.left + canvasRect.left;
-        dragOffset.y = e.clientY - rect.top + canvasRect.top;
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
         e.preventDefault();
     }
 
@@ -562,12 +562,13 @@
             const sRect = sticker.getBoundingClientRect();
             const cRect = canvasContainer.getBoundingClientRect();
 
-            const x = sRect.left - cRect.left;
-            const y = sRect.top - cRect.top;
+            const x = sRect.left - cRect.left + sRect.width / 2;
+            const y = sRect.top - cRect.top + sRect.height / 2;
 
-            const scaleX = img.classList.contains('flipped') ? -1 : 1;
-            const centerX = x + sRect.width / 2;
-            const centerY = y + sRect.height / 2;
+            const isFlipped = img.classList.contains('flipped');
+            const scaleX = isFlipped ? -1 : 1;
+            const centerX = x;
+            const centerY = y;
 
             ctx.save();
             ctx.translate(centerX, centerY);
@@ -580,7 +581,8 @@
                 ctx.rotate(rotation);
             }
 
-            ctx.drawImage(img, -sRect.width / 2 * scaleX, -sRect.height / 2, sRect.width, sRect.height);
+            // Draw the image centered at (0,0)
+            ctx.drawImage(img, -sRect.width / 2, -sRect.height / 2, sRect.width, sRect.height);
             ctx.restore();
         });
 
@@ -593,7 +595,8 @@
         });
     }
 
-    document.querySelectorAll('#export-btn').forEach(button => {
+    // Attach event listeners to all export buttons
+    exportButtons.forEach(button => {
         button.addEventListener('click', exportMeme);
     });
 
@@ -616,15 +619,11 @@
     document.addEventListener('mousemove', (e) => {
         if (isDragging && activeSticker) {
             const rect = canvasContainer.getBoundingClientRect();
-            const sRect = activeSticker.getBoundingClientRect();
-            const halfWidth = sRect.width / 2;
-            const halfHeight = sRect.height / 2;
+            const newX = e.clientX - rect.left - dragOffset.x;
+            const newY = e.clientY - rect.top - dragOffset.y;
 
-            const x = e.clientX - rect.left - halfWidth;
-            const y = e.clientY - rect.top - halfHeight;
-
-            activeSticker.style.left = `${x}px`;
-            activeSticker.style.top = `${y}px`;
+            activeSticker.style.left = `${newX}px`;
+            activeSticker.style.top = `${newY}px`;
         } else if (isResizing && activeSticker) {
             // Maintain aspect ratio during resizing
             const rect = activeSticker.getBoundingClientRect();
@@ -647,7 +646,7 @@
         } else if (isRotating && activeSticker) {
             const angle = Math.atan2(e.clientY - centerPoint.y, e.clientX - centerPoint.x);
             const rotation = initialRotation + (angle - initialAngle) * (180 / Math.PI);
-            activeSticker.style.transform = `rotate(${rotation}deg)`;
+            activeSticker.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
         }
     });
 
@@ -658,9 +657,6 @@
         activeSticker = null;
     });
 
-    exportBtn.addEventListener('click', () => {
-        exportMeme();
-    });
 })();
 </script>
 </body>
