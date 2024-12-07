@@ -164,6 +164,7 @@
     }
 
     .canvas-container {
+        touch-action: none;
         position: relative;
         width: 80%;
         max-width: 600px;
@@ -689,6 +690,10 @@
 
     function handleTouch(e) {
         const normalizedEvent = normalizeEvent(e);
+
+        if (isDragging || isResizing || isRotating) {
+            e.preventDefault();
+        }
 
         if (isDragging && activeSticker) {
             const rect = canvasContainer.getBoundingClientRect();
